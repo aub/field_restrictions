@@ -1,0 +1,7 @@
+new_york_times:
+  title: New York Times
+  subdomain: nyc
+
+boston_globe:
+  title: Boston Globe
+  subdomain: boston
