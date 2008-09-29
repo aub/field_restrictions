@@ -25,7 +25,6 @@ module FieldRestrictions
     
   module InstanceMethods
     def if_permitted(user, attribute, &block)
-      debugger
       yield if FieldRestrictions::Restrictor.permitted?(user, self, attribute)
     end
   end
