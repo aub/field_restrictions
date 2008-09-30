@@ -38,16 +38,18 @@ module FieldRestrictions
       end
       
       def create(attrs)
-        result = clazz.new
-        Restrictor.restrict_model(result, user)
+        result = @clazz.new
+        Restrictor.restrict_model(result, @user)
         result.attributes = attrs
         result.save
+        result
       end
       
       def new(attrs)
-        result = clazz.new
-        Restrictor.restrict_model(result, user)
+        result = @clazz.new
+        Restrictor.restrict_model(result, @user)
         result.attributes = attrs
+        result
       end
       
       def method_missing(method, *args)
@@ -76,7 +78,7 @@ module FieldRestrictions
     
     def create(attrs={})
       Restrictor::permitted!(@user, @model, @attribute_name)
-      result = proxy.build
+      result = @proxy.build
       Restrictor.restrict_model(result, @user)
       result.attributes = attrs
       result.save
@@ -85,7 +87,7 @@ module FieldRestrictions
 
     def build(attrs={})
       Restrictor::permitted!(@user, @model, @attribute_name)
-      result = proxy.build
+      result = @proxy.build
       Restrictor.restrict_model(result, @user)
       result.attributes = attrs
       result
