@@ -162,7 +162,7 @@ module FieldRestrictions
       return true if rules.empty?
       
       rule = rules[attribute_name]
-      return true if rule.empty?
+      return true if rule.blank?
       
       roles = user.roles_for(model)
       if roles.empty?

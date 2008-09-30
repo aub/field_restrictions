@@ -106,7 +106,7 @@ class FieldRestrictionsTest < Test::Unit::TestCase
   def test_should_restrict_parameters_through_subclasses
     @sub_article = SubArticle.as(@user).find_by_title('all about degas')
     assert_raise RestrictedAttributeError do
-      @sub_article.update_attribute(:title, 'ack')
+      @sub_article.update_attribute(:images, [])
     end
   end
   
@@ -131,6 +131,18 @@ class FieldRestrictionsTest < Test::Unit::TestCase
   def test_should_restrict_properly_across_has_many_through
     assert_raise RestrictedAttributeError do
       Publication.as(@user).find_by_title('New York Times').images.first.format = 'noooo'
+    end
+  end
+  
+  def test_should_create_restricted_models_through_class_create
+    assert_raise RestrictedAttributeError do
+      Image.as(@user).create(:size => 122)
+    end
+  end
+
+  def test_should_create_restricted_models_through_class_new
+    assert_raise RestrictedAttributeError do
+      Image.as(@user).new(:size => 122)
     end
   end
   
