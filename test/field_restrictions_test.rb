@@ -148,28 +148,30 @@ class FieldRestrictionsTest < Test::Unit::TestCase
   
   def test_if_permitted
     a = Article.find(:first)
-    test = 12
-    a.if_permitted(@user, :images) do
-      test = 13
-    end
-    assert_equal 12, test
+    assert !a.permitted?(@user, :images)
   end
   
   def test_if_permitted_executed_block_when_permitted
     a = Article.find(:first)
-    test = 12
-    a.if_permitted(@user, :title) do
-      test = 24
-    end
-    assert_equal 24, test
+    assert a.permitted?(@user, :title)
   end
   
   def test_if_permitted_executes_block_when_field_not_restricted
     a = Article.find(:first)
-    test = 12
-    a.if_permitted(@user, :hack) do
-      test = 24
-    end
-    assert_equal 24, test    
+    assert a.permitted?(@user, :hack)
+  end
+  
+  def test_if_permitted_takes_an_array_of_attributes_to_be_ored_together
+    i = Image.find(:first)
+    assert i.permitted?(@user, [:hack1, :mime_type], :or)
+    assert !i.permitted?(@user, [:format, :mime_type])
+  end
+  
+  def test_if_permitted_can_take_a_logical_operator
+    i = Image.find(:first)
+    assert i.permitted?(@user, [:hack1, :hack2], :and)
+    assert !i.permitted?(@user, [:hack1, :mime_type], :and)
+    assert i.permitted?(@user, [:hack1, :mime_type], :or)
+    assert !i.permitted?(@user, [:format, :mime_type], :or)
   end
 end

@@ -24,8 +24,8 @@ module FieldRestrictions
   end
     
   module InstanceMethods
-    def if_permitted(user, attribute, &block)
-      yield if FieldRestrictions::Restrictor.permitted?(user, self, attribute)
+    def permitted?(user, attributes, operator=:or)
+      FieldRestrictions::Restrictor.permitted?(user, self, attributes, operator)
     end
   end
     
@@ -157,11 +157,27 @@ module FieldRestrictions
       end
     end
     
-    def self.permitted?(user, model, attribute_name)
+    def self.permitted?(user, model, attribute_names, operator=:or)
+      results = Array(attribute_names).collect { |a| permitted_for_attribute?(user, model, a) }
+      (operator == :and) ? results.all? : results.any?
+    end
+
+    def self.permitted!(user, model, attribute_names, operator=:or)
+      unless permitted?(user, model, attribute_names, operator)
+        if attribute_names.kind_of?(Array)
+          raise RestrictedAttributeError, "You do not have permission to edit the attributes #{attribute_names * ', '}"
+        else
+          raise RestrictedAttributeError, "You do not have permission to edit the attribute #{attribute_names}"
+        end
+      end
+      true
+    end
+
+    def self.permitted_for_attribute?(user, model, attribute)
       rules = restrictions_for(model.class)
       return true if rules.empty?
       
-      rule = rules[attribute_name]
+      rule = rules[attribute]
       return true if rule.blank?
       
       roles = user.roles_for(model)
@@ -171,15 +187,7 @@ module FieldRestrictions
         result = Array(rule[:to]).any? { |r| roles.include?(r) }
       elsif rule[:from]
         result = !Array(rule[:from]).any? { |r| roles.include?(r) }
-      end
-    end
-
-    def self.permitted!(user, model, attribute_name)
-      if permitted?(user, model, attribute_name)
-        true
-      else
-        raise RestrictedAttributeError, "You do not have permission to edit the attribute #{attribute_name}"
-      end
+      end      
     end
     
     private
