@@ -103,6 +103,12 @@ class FieldRestrictionsTest < Test::Unit::TestCase
     end
   end
   
+  def test_should_not_restrict_calls_to_all_on_association_proxies
+    assert_nothing_raised do
+      @article.images.all
+    end
+  end
+  
   def test_should_restrict_parameters_through_subclasses
     @sub_article = SubArticle.as(@user).find_by_title('all about degas')
     assert_raise RestrictedAttributeError do

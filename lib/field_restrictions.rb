@@ -93,6 +93,10 @@ module FieldRestrictions
       result
     end
 
+    def all
+      @proxy.all
+    end
+
     alias_method :new, :build
     
     def method_missing(method, *args)
