@@ -163,4 +163,13 @@ class FieldRestrictionsTest < Test::Unit::TestCase
     end
     assert_equal 24, test
   end
+  
+  def test_if_permitted_executes_block_when_field_not_restricted
+    a = Article.find(:first)
+    test = 12
+    a.if_permitted(@user, :hack) do
+      test = 24
+    end
+    assert_equal 24, test    
+  end
 end
