@@ -32,12 +32,13 @@ module FieldRestrictions
     
     def add_restricted_attribute_change(attribute)
       @restricted_attribute_changes ||= []
-      @restricted_attribute_changes << attribute
+      @restricted_attribute_changes << attribute unless @restricted_attribute_changes.include?(attribute)
     end
     
     def ensure_no_restricted_attribute_changes
+      message = 'is restricted from the current user'
       (@restricted_attribute_changes || []).each do |attribute|
-        errors.add(attribute, 'is restricted from the current user')
+        errors.add(attribute, message) unless Array(errors.on(attribute)).include?(message)
       end
     end
   end
@@ -201,11 +202,9 @@ module FieldRestrictions
       unless permitted?(user, model, attribute_names, operator)
         if attribute_names.kind_of?(Array)
           attribute_names.each do |attribute|
-            model.errors.add(attribute, 'is restricted from the current user')
             model.add_restricted_attribute_change(attribute)
           end
         else
-          model.errors.add(attribute_names, 'is restricted from the current user')
           model.add_restricted_attribute_change(attribute_names)
         end
         false
