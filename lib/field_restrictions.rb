@@ -13,6 +13,8 @@ module FieldRestrictions
     Array(fields).each do |field|
       Restrictor.add_restrictions_for(self, field, args)
     end
+    
+    validate :ensure_no_restricted_attribute_changes
   end
 
   def as(user)
@@ -26,6 +28,17 @@ module FieldRestrictions
   module InstanceMethods
     def permitted?(user, attributes, operator=:or)
       FieldRestrictions::Restrictor.permitted?(user, self, attributes, operator)
+    end
+    
+    def add_restricted_attribute_change(attribute)
+      @restricted_attribute_changes ||= []
+      @restricted_attribute_changes << attribute
+    end
+    
+    def ensure_no_restricted_attribute_changes
+      (@restricted_attribute_changes || []).each do |attribute|
+        errors.add(attribute, 'is restricted from the current user')
+      end
     end
   end
     
@@ -93,14 +106,32 @@ module FieldRestrictions
       result
     end
 
-    def all
-      @proxy.all
-    end
-
     alias_method :new, :build
+
+    [:first, :last, :all].each do |method|
+      define_method "#{method}" do |*args|
+        result = @proxy.send(method, *args)
+        Array(result).each do |model|
+          FieldRestrictions::Restrictor.restrict_model model, @user
+        end
+        result
+      end
+    end
     
     def method_missing(method, *args)
-      if Restrictor::permitted!(@user, @model, @attribute_name)
+      if method.to_s.match('^find.*')
+        result = @proxy.send(method, *args)
+        return result if result.nil?
+        
+        if result.kind_of?(Enumerable)
+          result.each do |model|
+            Restrictor::restrict_model model, @user
+          end
+        elsif result.kind_of?(ActiveRecord::Base)
+          Restrictor::restrict_model result, @user
+        end
+        result
+      elsif Restrictor::permitted!(@user, @model, @attribute_name)
         @proxy.send(method, *args)
       end
     end
@@ -169,12 +200,18 @@ module FieldRestrictions
     def self.permitted!(user, model, attribute_names, operator=:or)
       unless permitted?(user, model, attribute_names, operator)
         if attribute_names.kind_of?(Array)
-          raise RestrictedAttributeError, "You do not have permission to edit the attributes #{attribute_names * ', '}"
+          attribute_names.each do |attribute|
+            model.errors.add(attribute, 'is restricted from the current user')
+            model.add_restricted_attribute_change(attribute)
+          end
         else
-          raise RestrictedAttributeError, "You do not have permission to edit the attribute #{attribute_names}"
+          model.errors.add(attribute_names, 'is restricted from the current user')
+          model.add_restricted_attribute_change(attribute_names)
         end
+        false
+      else
+        true
       end
-      true
     end
 
     def self.permitted_for_attribute?(user, model, attribute)

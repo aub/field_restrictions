@@ -34,122 +34,126 @@ class FieldRestrictionsTest < Test::Unit::TestCase
   end
   
   def test_should_throw_exception_when_updating_restricted_fields_through_update_attributes
-    assert_raise RestrictedAttributeError do
-      @image.update_attributes(:size => '2')
-    end
-    assert_raise RestrictedAttributeError do
-      @image.update_attributes(:mime_type => 'image/png')
-    end
+    @image.update_attributes(:size => '2')
+    assert @image.errors.on(:size)
+    
+    @image.update_attributes(:mime_type => 'image/png')
+    assert @image.errors.on(:mime_type)
   end
   
   def test_should_not_throw_exception_when_editing_unrestricted_attributes
-    assert_nothing_raised do
-      @image.update_attributes(:title => 'woo')
-    end
+    @image.update_attributes(:title => 'woo')
+    assert_nil @image.errors.on(:title)
   end
   
   def test_should_not_throw_exception_when_the_user_has_the_correct_permissions
     @user.stubs(:roles_for).returns(['NiceGuy'])
-    assert_nothing_raised do
-      @image.update_attributes(:format => 'jpeg')
-    end
+    @image.update_attributes(:format => 'jpeg')
+    assert_nil @image.errors.on(:format)
   end
   
   def test_should_throw_exception_when_updating_a_single_attribute
-    assert_raise RestrictedAttributeError do
-      @image.update_attribute(:format, 'ack')
-    end
+    @image.update_attribute(:format, 'ack')
+    assert @image.errors.on(:format)
   end
   
   def test_should_throw_exception_when_updating_a_single_attribute_through_attribute_equals
-    assert_raise RestrictedAttributeError do
-      @image.format = 'hack'
-    end
+    @image.format = 'hack'
+    assert @image.errors.on(:format)
   end
   
   def test_should_throw_exception_when_trying_to_set_a_restricted_association_proxy
-    assert_raise RestrictedAttributeError do
-      @article.images = []
-    end
+    @article.images = []
+    assert @article.errors.on(:images)
   end
   
   def test_should_throw_exception_when_using_create_on_a_restricted_association_proxy
-    assert_raise RestrictedAttributeError do
-      @article.images.create
-    end
+    @article.images.create
+    assert @article.errors.on(:images)
   end
 
   def test_should_throw_exception_when_using_new_on_a_restricted_association_proxy
-    assert_raise RestrictedAttributeError do
-      @article.images.create
-    end
+    @article.images.new
+    assert @article.errors.on(:images)
   end
 
   def test_should_throw_exception_when_using_build_on_a_restricted_association_proxy
-    assert_raise RestrictedAttributeError do
-      @article.images.create
-    end
+    @article.images.build
+    assert @article.errors.on(:images)
   end
   
   def test_should_allow_creation_through_the_association_proxy_when_unrestricted
-    assert_nothing_raised do
-      Publication.find(:first).articles.build
-    end
+    p = Publication.find(:first)
+    p.articles.build
+    assert_nil p.errors.on(:articles)
   end
   
-  def test_should_restrict_models_that_come_from_association_proxies
-    assert_raise RestrictedAttributeError do
-      @article.images.first.size = 12
+  def test_should_restrict_models_that_come_from_association_proxies_with_first
+    i = @article.images.first
+    i.size = 12
+    assert i.errors.on(:size)
+  end
+
+  def test_should_restrict_models_that_come_from_association_proxies_with_last
+    i = @article.images.last
+    i.size = 12
+    assert i.errors.on(:size)
+  end
+
+  def test_should_restrict_models_that_come_from_association_proxies_with_all
+    images = @article.images.all
+    images.each do |i|
+      i.size = 12
+      assert i.errors.on(:size)
     end
+  end
+
+  def test_should_restrict_models_that_come_from_association_proxies_with_find
+    image = @article.images.find_by_title('picasso')
+    image.size = 12
+    assert image.errors.on(:size)
   end
   
   def test_should_not_restrict_calls_to_all_on_association_proxies
-    assert_nothing_raised do
-      @article.images.all
-    end
+    @article.images.all
+    assert_nil @article.errors.on(:images)
   end
   
   def test_should_restrict_parameters_through_subclasses
     @sub_article = SubArticle.as(@user).find_by_title('all about degas')
-    assert_raise RestrictedAttributeError do
-      @sub_article.update_attribute(:images, [])
-    end
+    @sub_article.update_attribute(:images, [])
+    assert @sub_article.errors.on(:images)
   end
   
   def test_should_throw_an_exception_when_trying_to_push_items_onto_an_association_proxy
-    assert_raise RestrictedAttributeError do
-      @article.images << Image.new
-    end    
+    @article.images << Image.new
+    assert @article.errors.on(:images)
   end
   
   def test_shold_fail_to_assign_objects_through_the_association_proxy
-    assert_raise RestrictedAttributeError do
-      @article.images = []
-    end
+    @article.images = []
+    assert @article.errors.on(:images)
   end
   
   def test_should_restrict_setting_a_restricted_association_proxy_through_ids
-    assert_raise RestrictedAttributeError do
-      @article.image_ids = Image.find(:all).collect { |i| i.id }
-    end
+    @article.image_ids = Image.find(:all).collect { |i| i.id }
+    assert @article.errors.on(:images)
   end
   
   def test_should_restrict_properly_across_has_many_through
-    assert_raise RestrictedAttributeError do
-      Publication.as(@user).find_by_title('New York Times').images.first.format = 'noooo'
-    end
+    p = Publication.as(@user).find_by_title('New York Times')
+    p.images.first.format = 'noooo'
+    assert p.images.first.errors.on(:format)
   end
   
   def test_should_create_restricted_models_through_class_create
-    assert_raise RestrictedAttributeError do
-      Image.as(@user).create(:size => 122)
-    end
+    i = Image.as(@user).create(:size => 122)
+    assert i.errors.on(:size)
   end
 
   def test_should_create_restricted_models_through_class_new
-    assert_raise RestrictedAttributeError do
-      Image.as(@user).new(:size => 122)
-    end
+    i = Image.as(@user).new(:size => 122)
+    assert i.errors.on(:size)
   end
   
   def test_if_permitted
