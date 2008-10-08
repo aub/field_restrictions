@@ -104,15 +104,15 @@ with an error on the full_name field.
 Also, when accessing the items in a restricted model's association proxy, those models will also
 be restricted for the same user.
 
-class ArticlesController < ApplicationController
-  def update
-    # This restricts the article.
-    article = Article.as(current_user).find(params[:id])
+  class ArticlesController < ApplicationController
+    def update
+      # This restricts the article.
+      article = Article.as(current_user).find(params[:id])
     
-    # This updates the size attribute of a restricted image
-    article.images.first.update_attribute(:size, 12)
+      # This updates the size attribute of a restricted image
+      article.images.first.update_attribute(:size, 12)
+    end
   end
-end
 
 In the above example, the update of the size attribute will fail if current_user is restricted
 from editing that attribute, and the image will be invalid.
