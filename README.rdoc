@@ -1,0 +1,122 @@
+= FieldRestrictions
+
+FieldRestrictions is a plugin for Ruby on Rails that allows you to set up permissions for
+editing models at the individual attribute level. In addition to most existing authorization
+schemes, which are applied at the controller level and block entire actions, FieldRestrictions
+blocks unauthorized users from modifying specific attributes of your model in a way that is
+transparent to the controller code. It requires the presence of a user model and assumes a 
+role-based system.
+
+= Usage
+
+=== Defining restrictions
+
+Restrictions are set up at the model level:
+
+  class Image < ActiveRecord::Base  
+    restrict :size, :from => 'BadGuy'
+    restrict :format, :to => ['NiceGuy', 'Owner']
+  end
+
+In this case, the size attribute is restricted from users with the role 'BadGuy' and the
+format attribute is only editable by 'NiceGuy' and 'Owner'.
+
+=== Applying restrictions
+
+When updating attributes, the restrictions are applied by getting a restricted copy
+of a given model:
+
+  class ImagesController < ApplicationController
+    def update
+      image = Image.as(current_user).find(params[:id])
+      image.update_attributes(params[:image])
+    end
+  end
+
+This example gets a restricted copy of an image model for the current user 
+and updates its attributes. If the attributes hash contains data for fields that
+the current user is not allowed to edit, the fields will not be updated, and the image
+will be invalid after the update.
+
+=== Getting roles
+
+The plugin requires a roles_for() method on whatever model is passed to the as() method, 
+usually your User model, for determining the list of roles the object has for the given model.
+In the above example, the current_user object will receive a call to roles_for() with
+the image passed as a parameter.
+
+  class User < ActiveRecord::Base
+    def roles_for(model)
+      # returning the roles for this user in relation to the given model
+    end
+  end
+
+Passing the model allows the user to respond to meta-roles (i.e. owner of the model)
+as well as standard, static roles applied to individual users.
+
+=== Querying restrictions
+
+In addition to failing validation based on restricted attributes, the plugin allows you
+to conditionally execute code by checking the restrictions.
+
+  class ImagesController < ApplicationController
+    def update
+      image = Image.as(current_user).find(params[:id])
+      if image.permitted?(current_user, :size)
+        # Do something nasty to the size
+      end
+    end
+  end
+
+The nasty something will only be executed if the current_user model has permission
+to edit the size attribute of the image. The permitted? method can also be called with
+an array of attributes that will be ORed together, or an array of attributes and either
+:and or :or as a final argument in order to specify the logic operation:
+
+  # True if the user can edit size or format.
+  image.permitted?(current_user, [:size, :format])
+
+  # True if the user can edit size and format.
+  image.permitted?(current_user, [:size, :format], :and)
+
+=== Association proxies and virtual attributes
+
+In addition to standard attributes, restrictions can also be applied to both association
+proxies and virtual attributes.
+
+  class Article
+    has_many :images
+  
+    restrict :images, :from => 'BadGuy'
+    restrict :full_name, :to => 'NiceGuy'
+  
+    def full_name=(name)
+      # Set the name
+    end
+  end
+
+In this case, BadGuy users will be blocked from all modifications to the images association,
+including adding new images to it, deleting them, etc. In addition, the full_name virtual
+attribute will be blocked from everyone except NiceGuy users. An attempt to set the full_name
+by an unauthorized user will result in the method not being called and the model set to invalid
+with an error on the full_name field.
+
+Also, when accessing the items in a restricted model's association proxy, those models will also
+be restricted for the same user.
+
+class ArticlesController < ApplicationController
+  def update
+    # This restricts the article.
+    article = Article.as(current_user).find(params[:id])
+    
+    # This updates the size attribute of a restricted image
+    article.images.first.update_attribute(:size, 12)
+  end
+end
+
+In the above example, the update of the size attribute will fail if current_user is restricted
+from editing that attribute, and the image will be invalid.
+
+= License
+
+Copyright (c) 2008 Aubrey Holland, patch.com, released under the MIT license
