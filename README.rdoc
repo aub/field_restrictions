@@ -119,4 +119,4 @@ from editing that attribute, and the image will be invalid.
 
 = License
 
-Copyright (c) 2008 Aubrey Holland, patch.com, released under the MIT license
+Copyright (c) 2008 Aubrey Holland, patch, released under the MIT license
