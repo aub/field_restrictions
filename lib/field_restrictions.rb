@@ -66,9 +66,9 @@ module FieldRestrictions
         result
       end
       
-      def method_missing(method, *args)
+      def method_missing(method, *args, &block)
         if method.to_s.match('^find.*')
-          result = @clazz.send(method, *args)
+          result = @clazz.send(method, *args, &block)
           return result if result.nil?
           
           if result.kind_of?(Enumerable)
@@ -119,9 +119,9 @@ module FieldRestrictions
       end
     end
     
-    def method_missing(method, *args)
+    def method_missing(method, *args, &block)
       if method.to_s.match('^find.*')
-        result = @proxy.send(method, *args)
+        result = @proxy.send(method, *args, &block)
         return result if result.nil?
         
         if result.kind_of?(Enumerable)
@@ -133,7 +133,7 @@ module FieldRestrictions
         end
         result
       elsif Restrictor::permitted!(@user, @model, @attribute_name)
-        @proxy.send(method, *args)
+        @proxy.send(method, *args, &block)
       end
     end
   end
