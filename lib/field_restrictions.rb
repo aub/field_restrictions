@@ -160,35 +160,33 @@ module FieldRestrictions
       model_class = model.class
       model.instance_eval do
         (class << self; self; end).class_eval do
-          include(Module.new do
-            restrictions.each do |attribute, rule|
-              define_method "#{attribute}=" do |value|
-                roles = user.roles_for(self)                
-                if FieldRestrictions::Restrictor.permitted!(user, self, attribute)
-                  super
-                end
+          restrictions.each do |attribute, rule|
+            define_method "#{attribute}=" do |value|
+              roles = user.roles_for(self)                
+              if FieldRestrictions::Restrictor.permitted!(user, self, attribute)
+                super
               end
             end
-            
-            model_class.reflections.each do |key, reflection|
-              define_method "#{key}" do
-                result = super
-                if result.kind_of?(Enumerable)
-                  result.each do |item|
-                    FieldRestrictions::Restrictor.restrict_model item, user
-                  end
-                elsif result.kind_of?(ActiveRecord::Base)
-                  FieldRestrictions::Restrictor.restrict_model result, user
+          end
+          
+          model_class.reflections.each do |key, reflection|
+            define_method "#{key}" do
+              result = super
+              if result.kind_of?(Enumerable)
+                result.each do |item|
+                  FieldRestrictions::Restrictor.restrict_model item, user
                 end
-                
-                if FieldRestrictions::Restrictor.restrictions_for(self.class)[key]
-                  FieldRestrictions::AssociationProxyWrapper.new(result, user, self, key)
-                else
-                  result
-                end
+              elsif result.kind_of?(ActiveRecord::Base)
+                FieldRestrictions::Restrictor.restrict_model result, user
+              end
+              
+              if FieldRestrictions::Restrictor.restrictions_for(self.class)[key]
+                FieldRestrictions::AssociationProxyWrapper.new(result, user, self, key)
+              else
+                result
               end
             end
-          end)
+          end
         end
       end
     end
