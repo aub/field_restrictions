@@ -92,19 +92,12 @@ module FieldRestrictions
     
     def create(attrs={})
       Restrictor::permitted!(@user, @model, @attribute_name)
-      result = @proxy.build
-      Restrictor.restrict_model(result, @user)
-      result.attributes = attrs
-      result.save
-      result
+      build_some(attrs, true)
     end
 
     def build(attrs={})
       Restrictor::permitted!(@user, @model, @attribute_name)
-      result = @proxy.build
-      Restrictor.restrict_model(result, @user)
-      result.attributes = attrs
-      result
+      build_some(attrs, false)
     end
 
     alias_method :new, :build
@@ -119,6 +112,8 @@ module FieldRestrictions
       end
     end
     
+    PASS_THROUGH_METHODS = [:count, :size, :each, :map, :collect]
+    
     def method_missing(method, *args, &block)
       if method.to_s.match('^find.*')
         result = @proxy.send(method, *args, &block)
@@ -132,9 +127,27 @@ module FieldRestrictions
           Restrictor::restrict_model result, @user
         end
         result
-      elsif Restrictor::permitted!(@user, @model, @attribute_name)
+      elsif PASS_THROUGH_METHODS.include?(method) || Restrictor::permitted!(@user, @model, @attribute_name)
         @proxy.send(method, *args, &block)
       end
+    end
+    
+    protected
+    
+    def build_some(attrs, save_it=false)
+      if attrs.kind_of?(Array)
+        attrs.map { |attr| build_one(attr, save_it) }
+      else
+        build_one(attrs)
+      end
+    end
+    
+    def build_one(attrs, save_it=false)
+      result = @proxy.build
+      Restrictor.restrict_model(result, @user)
+      result.attributes = attrs
+      result.save
+      result
     end
   end
   

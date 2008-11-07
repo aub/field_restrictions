@@ -99,6 +99,14 @@ class FieldRestrictionsTest < Test::Unit::TestCase
     assert_nil p.errors.on(:articles)
   end
   
+  def test_should_allow_build_for_multiple_objects
+    @article.images.each { |image| image.destroy }
+    @article.images.build([{:title => 'a'}, {:title => 'b'}])
+    @article.reload
+    assert_equal 2, @article.images.size
+    assert_equal %w(a b), @article.images.map { |i| i.title }.sort
+  end
+  
   def test_should_restrict_models_that_come_from_association_proxies_with_first
     i = @article.images.first
     i.size = 12
